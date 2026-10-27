@@ -1,0 +1,74 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Jeroen.nl",
+        "description": "Enter an API key from jeroen.nl (Account → API keys). The account allows 10 calls per day per data type for all keys together; this integration uses only a few and caches everything.",
+        "data": {
+          "api_key": "API key"
+        }
+      },
+      "reauth_confirm": {
+        "title": "Jeroen.nl",
+        "description": "The API key was refused. Enter a new key.",
+        "data": {
+          "api_key": "API key"
+        }
+      }
+    },
+    "error": {
+      "invalid_auth": "The API key was refused (unknown or revoked).",
+      "cannot_connect": "Could not reach jeroen.nl."
+    },
+    "abort": {
+      "already_configured": "Jeroen.nl is already configured.",
+      "reauth_successful": "The new API key works."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Tariffs and data",
+        "description": "All-in price = (market price + markup + energy tax) × (1 + VAT). Amounts excluding VAT.",
+        "data": {
+          "markup": "Electricity markup (EUR/kWh, excl. VAT)",
+          "energy_tax": "Electricity energy tax (EUR/kWh, excl. VAT)",
+          "vat": "VAT (%)",
+          "gas": "Fetch gas prices",
+          "gas_markup": "Gas markup (EUR/m³, excl. VAT)",
+          "gas_energy_tax": "Gas energy tax (EUR/m³, excl. VAT)",
+          "solar": "Fetch solar forecast",
+          "limit_power": "Max. electricity price calls per day (the account allows 10 for all keys together)"
+        }
+      }
+    }
+  },
+  "entity": {
+    "sensor": {
+      "electricity_price": {
+        "name": "Electricity price"
+      },
+      "electricity_market_price": {
+        "name": "Electricity market price"
+      },
+      "gas_price": {
+        "name": "Gas price"
+      },
+      "solar_forecast_today": {
+        "name": "Solar forecast today"
+      },
+      "solar_forecast_tomorrow": {
+        "name": "Solar forecast tomorrow"
+      },
+      "api_calls_power": {
+        "name": "API calls today (electricity)"
+      },
+      "api_calls_gas": {
+        "name": "API calls today (gas)"
+      },
+      "api_calls_solar": {
+        "name": "API calls today (solar)"
+      }
+    }
+  }
+}

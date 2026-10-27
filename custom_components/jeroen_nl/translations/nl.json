@@ -1,0 +1,74 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Jeroen.nl",
+        "description": "Vul een API-sleutel van jeroen.nl in (Account → API-sleutels). Het account mag per soort data 10 keer per dag ophalen, voor alle sleutels samen; deze integratie gebruikt er maar een paar en bewaart alles.",
+        "data": {
+          "api_key": "API-sleutel"
+        }
+      },
+      "reauth_confirm": {
+        "title": "Jeroen.nl",
+        "description": "De API-sleutel werd geweigerd. Vul een nieuwe sleutel in.",
+        "data": {
+          "api_key": "API-sleutel"
+        }
+      }
+    },
+    "error": {
+      "invalid_auth": "De API-sleutel wordt geweigerd (onbekend of ingetrokken).",
+      "cannot_connect": "Jeroen.nl is niet bereikbaar."
+    },
+    "abort": {
+      "already_configured": "Jeroen.nl is al ingesteld.",
+      "reauth_successful": "De nieuwe API-sleutel werkt."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Tarieven en data",
+        "description": "Totaalprijs = (marktprijs + opslag + energiebelasting) × (1 + btw). Bedragen exclusief btw.",
+        "data": {
+          "markup": "Opslag stroom (EUR/kWh, excl. btw)",
+          "energy_tax": "Energiebelasting stroom (EUR/kWh, excl. btw)",
+          "vat": "Btw (%)",
+          "gas": "Gasprijzen ophalen",
+          "gas_markup": "Opslag gas (EUR/m³, excl. btw)",
+          "gas_energy_tax": "Energiebelasting gas (EUR/m³, excl. btw)",
+          "solar": "Opwekvoorspelling ophalen",
+          "limit_power": "Max. aantal keer stroomprijzen ophalen per dag (het account mag 10, voor alle sleutels samen)"
+        }
+      }
+    }
+  },
+  "entity": {
+    "sensor": {
+      "electricity_price": {
+        "name": "Stroomprijs"
+      },
+      "electricity_market_price": {
+        "name": "Stroomprijs markt"
+      },
+      "gas_price": {
+        "name": "Gasprijs"
+      },
+      "solar_forecast_today": {
+        "name": "Opwekvoorspelling vandaag"
+      },
+      "solar_forecast_tomorrow": {
+        "name": "Opwekvoorspelling morgen"
+      },
+      "api_calls_power": {
+        "name": "API-aanroepen vandaag (stroom)"
+      },
+      "api_calls_gas": {
+        "name": "API-aanroepen vandaag (gas)"
+      },
+      "api_calls_solar": {
+        "name": "API-aanroepen vandaag (opwek)"
+      }
+    }
+  }
+}
