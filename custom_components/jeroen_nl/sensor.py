@@ -37,7 +37,18 @@ from .const import (
     UNIT_M3_PRICE,
 )
 from .coordinator import JeroenConfigEntry, JeroenCoordinator
-from .core import KIND_GAS, KIND_POWER, KIND_SOLAR, NL_TZ, PricePoint, Tariff
+from .core import (
+    KIND_GAS,
+    KIND_POWER,
+    KIND_SOLAR,
+    NL_TZ,
+    DayStats,
+    PricePoint,
+    Tariff,
+    current_point,
+    day_stats,
+    next_point,
+)
 
 BIG_LISTS = frozenset({"prices", "forecast", "today", "tomorrow", "hours", "days"})
 
@@ -52,7 +63,32 @@ def _gas_tariff(c: JeroenCoordinator) -> Tariff:
 
 def _current(c: JeroenCoordinator) -> PricePoint | None:
     now = dt_util.utcnow()
-    return next((p for p in c.cache.combined_prices(now) if p.start <= now < p.end and not p.forecast), None)
+    return current_point(c.cache.combined_prices(now), now)
+
+
+def _next(c: JeroenCoordinator) -> PricePoint | None:
+    now = dt_util.utcnow()
+    return next_point(c.cache.combined_prices(now), now)
+
+
+def _day_points(c: JeroenCoordinator, offset: int) -> list[PricePoint]:
+    day = dt_util.now().astimezone(NL_TZ).date() + timedelta(days=offset)
+    return c.cache.prices.get(day, [])
+
+
+def _stats(c: JeroenCoordinator, offset: int) -> DayStats | None:
+    return day_stats(_day_points(c, offset))
+
+
+def _all_in(c: JeroenCoordinator, p: PricePoint | None) -> float | None:
+    return _tariff(c).all_in(p.price) if p else None
+
+
+def _span(c: JeroenCoordinator, p: PricePoint | None) -> dict[str, Any]:
+    if p is None:
+        return {}
+    return {"start": p.start.isoformat(), "end": p.end.isoformat(), "price": _all_in(c, p),
+            "market": p.price}
 
 
 def _row(p: PricePoint, t: Tariff) -> dict[str, Any]:
@@ -64,9 +100,8 @@ def _row(p: PricePoint, t: Tariff) -> dict[str, Any]:
 
 
 def _day_rows(c: JeroenCoordinator, offset: int) -> list[dict[str, Any]]:
-    day = dt_util.now().astimezone(NL_TZ).date() + timedelta(days=offset)
     t = _tariff(c)
-    return [_row(p, t) for p in c.cache.prices.get(day, [])]
+    return [_row(p, t) for p in _day_points(c, offset)]
 
 
 def _price_attrs(c: JeroenCoordinator) -> dict[str, Any]:
@@ -122,6 +157,29 @@ def _calls(kind: str) -> Callable[[JeroenCoordinator], int]:
     return lambda c: c.cache.calls_today(kind, dt_util.now().astimezone(NL_TZ).date())
 
 
+def _day_sensors(offset: int, suffix: str) -> tuple[JeroenSensorDescription, ...]:
+    """Lowest, highest, average and cheapest moment for today (0) or tomorrow (1)."""
+    price = {"native_unit_of_measurement": UNIT_KWH_PRICE, "suggested_display_precision": 4}
+    return (
+        JeroenSensorDescription(
+            key=f"lowest_price_{suffix}", **price,
+            value_fn=lambda c: _all_in(c, s.lowest) if (s := _stats(c, offset)) else None,
+            attrs_fn=lambda c: _span(c, s.lowest) if (s := _stats(c, offset)) else {}),
+        JeroenSensorDescription(
+            key=f"highest_price_{suffix}", **price,
+            value_fn=lambda c: _all_in(c, s.highest) if (s := _stats(c, offset)) else None,
+            attrs_fn=lambda c: _span(c, s.highest) if (s := _stats(c, offset)) else {}),
+        JeroenSensorDescription(
+            key=f"average_price_{suffix}", **price,
+            value_fn=lambda c: _tariff(c).all_in(s.average) if (s := _stats(c, offset)) else None),
+        # a timestamp sensor, usable directly as a time trigger in automations
+        JeroenSensorDescription(
+            key=f"cheapest_moment_{suffix}", device_class=SensorDeviceClass.TIMESTAMP,
+            value_fn=lambda c: s.lowest.start if (s := _stats(c, offset)) else None,
+            attrs_fn=lambda c: _span(c, s.lowest) if (s := _stats(c, offset)) else {}),
+    )
+
+
 SENSORS: tuple[JeroenSensorDescription, ...] = (
     JeroenSensorDescription(
         key="electricity_price", native_unit_of_measurement=UNIT_KWH_PRICE,
@@ -132,6 +190,11 @@ SENSORS: tuple[JeroenSensorDescription, ...] = (
         key="electricity_market_price", native_unit_of_measurement=UNIT_KWH_PRICE,
         state_class=SensorStateClass.MEASUREMENT, suggested_display_precision=4,
         value_fn=lambda c: p.price if (p := _current(c)) else None),
+    JeroenSensorDescription(
+        key="next_price", native_unit_of_measurement=UNIT_KWH_PRICE, suggested_display_precision=4,
+        value_fn=lambda c: _all_in(c, _next(c)), attrs_fn=lambda c: _span(c, _next(c))),
+    *_day_sensors(0, "today"),
+    *_day_sensors(1, "tomorrow"),
     JeroenSensorDescription(
         key="gas_price", native_unit_of_measurement=UNIT_M3_PRICE,
         state_class=SensorStateClass.MEASUREMENT, suggested_display_precision=4,

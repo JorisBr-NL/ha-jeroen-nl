@@ -68,6 +68,33 @@
       },
       "api_calls_solar": {
         "name": "API calls today (solar)"
+      },
+      "next_price": {
+        "name": "Next price"
+      },
+      "lowest_price_today": {
+        "name": "Lowest price today"
+      },
+      "highest_price_today": {
+        "name": "Highest price today"
+      },
+      "average_price_today": {
+        "name": "Average price today"
+      },
+      "cheapest_moment_today": {
+        "name": "Cheapest moment today"
+      },
+      "lowest_price_tomorrow": {
+        "name": "Lowest price tomorrow"
+      },
+      "highest_price_tomorrow": {
+        "name": "Highest price tomorrow"
+      },
+      "average_price_tomorrow": {
+        "name": "Average price tomorrow"
+      },
+      "cheapest_moment_tomorrow": {
+        "name": "Cheapest moment tomorrow"
       }
     }
   }

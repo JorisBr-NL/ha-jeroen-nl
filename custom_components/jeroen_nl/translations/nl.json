@@ -68,6 +68,33 @@
       },
       "api_calls_solar": {
         "name": "API-aanroepen vandaag (opwek)"
+      },
+      "next_price": {
+        "name": "Volgende prijs"
+      },
+      "lowest_price_today": {
+        "name": "Laagste prijs vandaag"
+      },
+      "highest_price_today": {
+        "name": "Hoogste prijs vandaag"
+      },
+      "average_price_today": {
+        "name": "Gemiddelde prijs vandaag"
+      },
+      "cheapest_moment_today": {
+        "name": "Goedkoopste moment vandaag"
+      },
+      "lowest_price_tomorrow": {
+        "name": "Laagste prijs morgen"
+      },
+      "highest_price_tomorrow": {
+        "name": "Hoogste prijs morgen"
+      },
+      "average_price_tomorrow": {
+        "name": "Gemiddelde prijs morgen"
+      },
+      "cheapest_moment_tomorrow": {
+        "name": "Goedkoopste moment morgen"
       }
     }
   }
