@@ -182,6 +182,39 @@ class Tariff:
         return round((market + self.markup + self.energy_tax) * (1 + self.vat_pct / 100), 5)
 
 
+# ---------------------------------------------------------------- day statistics
+
+@dataclass(frozen=True)
+class DayStats:
+    """Lowest, highest and average market price of one day. The all-in tariff is
+    an increasing linear function, so the same quarters are lowest and highest
+    all-in, and all_in(average) is the all-in average."""
+
+    lowest: PricePoint
+    highest: PricePoint
+    average: float
+
+
+def day_stats(points: list[PricePoint]) -> DayStats | None:
+    if not points:
+        return None
+    return DayStats(
+        lowest=min(points, key=lambda p: (p.price, p.start)),   # earliest on a tie
+        highest=max(points, key=lambda p: (p.price, -p.start.timestamp())),
+        average=sum(p.price for p in points) / len(points),
+    )
+
+
+def current_point(points: list[PricePoint], now: datetime) -> PricePoint | None:
+    return next((p for p in points if p.start <= now < p.end and not p.forecast), None)
+
+
+def next_point(points: list[PricePoint], now: datetime) -> PricePoint | None:
+    """The first final quarter that starts after now."""
+    return next((p for p in sorted(points, key=lambda p: p.start)
+                 if p.start > now and not p.forecast), None)
+
+
 # ---------------------------------------------------------------- cache and schedule
 
 @dataclass

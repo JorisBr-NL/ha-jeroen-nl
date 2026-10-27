@@ -79,6 +79,30 @@ def test_tariff_all_in():
     assert t.all_in(None) is None
 
 
+# ---------------------------------------------------------------- day statistics
+
+def _points(prices, start=nl(2026, 10, 27, 10)):
+    return [core.PricePoint((start + i * core.SLOT).astimezone(timezone.utc), p)
+            for i, p in enumerate(prices)]
+
+
+def test_day_stats_lowest_highest_average():
+    stats = core.day_stats(_points([0.20, 0.05, 0.30, 0.05, 0.30]))
+    assert stats.lowest.price == 0.05 and stats.lowest.start == _points([0, 0])[1].start  # earliest tie
+    assert stats.highest.price == 0.30 and stats.highest.start == _points([0, 0, 0])[2].start
+    assert stats.average == pytest.approx(0.18)
+    assert core.day_stats([]) is None
+
+
+def test_current_and_next_point_skip_forecast():
+    pts = _points([0.1, 0.2, 0.3])
+    fc = core.PricePoint(pts[-1].end, 0.9, 0.8, 1.0, True)
+    now = pts[0].start + timedelta(minutes=5)
+    assert core.current_point(pts + [fc], now).price == 0.1
+    assert core.next_point(pts + [fc], now).price == 0.2
+    assert core.next_point(pts + [fc], pts[2].start + timedelta(minutes=1)) is None
+
+
 # ---------------------------------------------------------------- cache
 
 def test_store_keeps_longest_day_and_combines_with_forecast():
