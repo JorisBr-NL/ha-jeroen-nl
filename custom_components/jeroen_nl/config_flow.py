@@ -34,9 +34,10 @@ KEY_SCHEMA = vol.Schema({
 })
 
 
-def _price(step: float = 0.00001) -> selector.NumberSelector:
+def _price() -> selector.NumberSelector:
+    # HA only accepts a numeric step >= 0.001; prices need 5 decimals, so "any"
     return selector.NumberSelector(selector.NumberSelectorConfig(
-        min=0, max=2, step=step, mode=selector.NumberSelectorMode.BOX))
+        min=0, max=2, step="any", mode=selector.NumberSelectorMode.BOX))
 
 
 async def _validate(hass, key: str) -> str | None:
