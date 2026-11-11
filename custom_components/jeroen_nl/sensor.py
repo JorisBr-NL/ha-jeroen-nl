@@ -7,7 +7,7 @@ from __future__ import annotations
 
 from collections.abc import Callable
 from dataclasses import dataclass
-from datetime import timedelta
+from datetime import datetime, time, timedelta
 from typing import Any
 
 from homeassistant.components.sensor import (
@@ -47,6 +47,7 @@ from .core import (
     Tariff,
     current_point,
     day_stats,
+    gas_day,
     next_point,
 )
 
@@ -142,8 +143,17 @@ def _solar_attrs(c: JeroenCoordinator, offset: int) -> dict[str, Any]:
 
 
 def _gas_price(c: JeroenCoordinator) -> float | None:
-    today = dt_util.now().astimezone(NL_TZ).date()
-    return _gas_tariff(c).all_in(c.cache.gas.get(today))
+    return _gas_tariff(c).all_in(c.cache.gas_price(dt_util.utcnow()))
+
+
+def _gas_attrs(c: JeroenCoordinator) -> dict[str, Any]:
+    now = dt_util.utcnow()
+    day = gas_day(now)
+    start = datetime.combine(day, time(6), NL_TZ)
+    nxt = c.cache.gas.get(day + timedelta(days=1))
+    return {"market_price": c.cache.gas_price(now), "gas_day": day.isoformat(),
+            "start": start.isoformat(), "end": (start + timedelta(days=1)).isoformat(),
+            "next_price": _gas_tariff(c).all_in(nxt), "next_market_price": nxt}
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -198,7 +208,7 @@ SENSORS: tuple[JeroenSensorDescription, ...] = (
     JeroenSensorDescription(
         key="gas_price", native_unit_of_measurement=UNIT_M3_PRICE,
         state_class=SensorStateClass.MEASUREMENT, suggested_display_precision=4,
-        value_fn=_gas_price, enabled_fn=lambda c: bool(c.option(CONF_GAS))),
+        value_fn=_gas_price, attrs_fn=_gas_attrs, enabled_fn=lambda c: bool(c.option(CONF_GAS))),
     JeroenSensorDescription(
         key="solar_forecast_today", device_class=SensorDeviceClass.ENERGY,
         native_unit_of_measurement=UnitOfEnergy.KILO_WATT_HOUR, suggested_display_precision=1,

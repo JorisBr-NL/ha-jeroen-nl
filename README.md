@@ -18,7 +18,7 @@ Zonder in te loggen mag een account **10 keer per dag per soort data** ophalen, 
 | Prijzen vandaag | alleen als ze er nog niet zijn (normaal al opgehaald als "morgen") | 0–1 |
 | Prijzen morgen | vanaf 13:15, tot ze er zijn (elke 30 min een poging) | 1–2 |
 | Prijsvoorspelling | één keer na 05:00 | 1 |
-| Gasprijs | één keer na 06:00 | 1 |
+| Gasprijs | de prijs van de volgende gasdag vanaf 13:15 (bekend rond 13:00); ontbreekt de prijs van de lopende gasdag, dan elke 2 uur een nieuwe poging | 1 (max. 4) |
 | Opwekvoorspelling | één keer na 01:15 | 1 |
 
 Een eigen maximum per dag (standaard 6 voor stroomprijzen) laat ruimte voor andere sleutels van hetzelfde account. De diagnostische sensoren *API-aanroepen vandaag* laten zien hoeveel er gebruikt is.
@@ -34,7 +34,7 @@ Een eigen maximum per dag (standaard 6 voor stroomprijzen) laat ruimte voor ande
 | Gemiddelde prijs vandaag | gemiddelde totaalprijs van de dag | |
 | Goedkoopste moment vandaag | tijdstempel van het goedkoopste kwartier, direct bruikbaar als tijd-trigger | `end`, `price` |
 | Laagste / hoogste / gemiddelde prijs morgen, goedkoopste moment morgen | hetzelfde voor morgen; leeg tot de prijzen van morgen bekend zijn (~13:15) | |
-| Gasprijs | totaalprijs vandaag (EUR/m³) | |
+| Gasprijs | totaalprijs van de lopende gasdag (EUR/m³); een gasdag loopt van 06:00 tot 06:00 | `market_price`, `gas_day`, `start`, `end`, `next_price` |
 | Opwekvoorspelling vandaag / morgen | kWh | `p10`, `p90`; bij vandaag ook `days` en `hours` |
 
 `prices` is de lijst om mee te plannen: de vastgestelde kwartierprijzen vanaf nu, gevolgd door de voorspelde kwartieren met `low`/`high` en `forecast: true`. Elke regel heeft `start`, `end`, `price` (totaal) en `market`. De grote lijsten worden niet in de recorder opgeslagen.
