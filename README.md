@@ -57,7 +57,7 @@ actions:
 
 Drie tegels (nu, laagst, goedkoopst) met daaronder een grafiek van vandaag, morgen en de voorspelling voor de dagen erna. Elk vastgesteld kwartier krijgt een kleur ten opzichte van het daggemiddelde: groen is meer dan 10% goedkoper, rood meer dan 10% duurder, oranje daartussen. De voorspelde kwartieren zijn grijs.
 
-Vereist: [apexcharts-card](https://github.com/RomRider/apexcharts-card) (HACS → Frontend). De entity-ID's hieronder gelden als Home Assistant in het Nederlands staat; controleer ze via **Instellingen → Entiteiten**.
+Vereist: [apexcharts-card](https://github.com/RomRider/apexcharts-card) (te installeren via **Instellingen → Marketplace**). De entity-ID's hieronder gelden als Home Assistant in het Nederlands staat; controleer ze via **Instellingen → Entiteiten**.
 
 ```yaml
 type: vertical-stack
@@ -187,9 +187,15 @@ Pas `0.9` en `1.1` aan om de grenzen voor goedkoop en duur te verschuiven, en `g
 
 ## Installeren
 
-1. HACS → Integraties → menu → *Custom repositories* → deze repo, categorie *Integration*.
-2. *Jeroen.nl* installeren en Home Assistant herstarten.
-3. Instellingen → Apparaten & diensten → *Integratie toevoegen* → *Jeroen.nl*, en een API-sleutel invullen (maak er een op jeroen.nl → Account → API-sleutels). Het controleren van de sleutel kost één aanroep van de opwekvoorspelling.
+Vanaf Home Assistant 2026.11 installeer je community-integraties via de ingebouwde **Marketplace** (de opvolger van HACS):
+
+1. Instellingen → **Marketplace** → rechtsboven *Add from link*.
+2. Vul `JorisBr-NL/ha-jeroen-nl` in en kies *Add*. Vraagt de Marketplace om het type, kies dan *Integration*. Heb je GitHub nog niet gekoppeld, dan vraagt de Marketplace daar eerst om.
+3. Open *Jeroen.nl* in de lijst en kies *Install*. Meldt de Marketplace dat een herstart nodig is, herstart dan Home Assistant.
+
+Heb je HACS gebruikt? Dan neemt de Marketplace deze repository bij de update naar 2026.11 vanzelf over. Op Home Assistant 2026.10 of ouder werkt het nog via HACS: HACS → Integraties → menu → *Custom repositories* → deze repo, categorie *Integration*, daarna installeren en herstarten.
+
+Daarna voeg je de integratie toe: Instellingen → Apparaten & diensten → *Integratie toevoegen* → *Jeroen.nl*, en een API-sleutel invullen (maak er een op jeroen.nl → Account → API-sleutels). Het controleren van de sleutel kost één aanroep van de opwekvoorspelling.
 
 ## Ontwikkelen
 
