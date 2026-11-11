@@ -106,7 +106,8 @@ def parse_prices(data: Any) -> tuple[list[PricePoint], datetime | None]:
 
 
 def parse_gas(data: Any) -> dict[date, float]:
-    """Parse the gas history: price per day (EUR/m3, excluding taxes)."""
+    """Parse the gas history: price per gas day (EUR/m3, excluding taxes). The date
+    is the day the gas day starts; it runs from 06:00 to 06:00 the next day."""
     out: dict[date, float] = {}
     for row in _rows(data):
         price = _num(row.get("prijs_excl_belastingen"))
@@ -215,6 +216,17 @@ def next_point(points: list[PricePoint], now: datetime) -> PricePoint | None:
                  if p.start > now and not p.forecast), None)
 
 
+# ---------------------------------------------------------------- gas day
+
+GAS_DAY_START = timedelta(hours=6)
+
+
+def gas_day(now: datetime) -> date:
+    """The gas day `now` falls in: a gas day runs from 06:00 to 06:00 Dutch time, so
+    between midnight and 06:00 yesterday's price still applies."""
+    return (now.astimezone(NL_TZ).replace(tzinfo=None) - GAS_DAY_START).date()
+
+
 # ---------------------------------------------------------------- cache and schedule
 
 @dataclass
@@ -249,6 +261,10 @@ class Cache:
 
     def calls_today(self, kind: str, today: date) -> int:
         return self.calls.get(kind, 0) if self.calls_day == today else 0
+
+    def gas_price(self, now: datetime) -> float | None:
+        """Market gas price of the current gas day."""
+        return self.gas.get(gas_day(now))
 
     def combined_prices(self, now: datetime) -> list[PricePoint]:
         """Final prices from yesterday on, followed by forecast quarters after the last
@@ -301,8 +317,9 @@ REQUEST_KIND = {REQ_TODAY: KIND_POWER, REQ_TOMORROW: KIND_POWER, REQ_FORECAST: K
 TOMORROW_FROM = time(13, 15)
 FORECAST_FROM = time(5, 0)     # a new forecast every morning (made ~04:00)
 SOLAR_FROM = time(1, 15)       # new solar forecast ready for everyone around 01:00
-GAS_FROM = time(6, 0)
+GAS_NEXT_FROM = time(13, 15)   # next gas day's price is published around 13:00
 RETRY = timedelta(minutes=30)
+GAS_RETRY = timedelta(hours=2)  # gas prices change once a day: no need to hurry
 
 
 @dataclass(frozen=True)
@@ -311,7 +328,7 @@ class Limits:
     the account together, so leave room for other users of the same account."""
 
     power: int = 6
-    gas: int = 2
+    gas: int = 4
     solar: int = 3
 
     def for_kind(self, kind: str) -> int:
@@ -334,9 +351,15 @@ def due_requests(cache: Cache, now: datetime, limits: Limits | None = None,
     forecast_today = cache.forecast_made is not None and cache.forecast_made.astimezone(NL_TZ).date() == today
     if local.time() >= FORECAST_FROM and not forecast_today:
         wanted.append(REQ_FORECAST)
-    if want_gas and local.time() >= GAS_FROM and (
-            cache.gas_fetched is None or cache.gas_fetched.astimezone(NL_TZ).date() < today):
-        wanted.append(REQ_GAS)
+    if want_gas:
+        # Fetch until we have the price of the current gas day, and from 13:15
+        # on the price of the next one. A call that does not contain the day we
+        # need is retried, instead of waiting a whole day.
+        current = gas_day(now)
+        missing_next = (local.time() >= GAS_NEXT_FROM
+                        and current + timedelta(days=1) not in cache.gas)
+        if current not in cache.gas or missing_next:
+            wanted.append(REQ_GAS)
     if want_solar:
         solar_cutoff = datetime.combine(today, SOLAR_FROM, NL_TZ)
         if local >= solar_cutoff and (cache.solar_fetched is None or cache.solar_fetched < solar_cutoff):
@@ -346,7 +369,7 @@ def due_requests(cache: Cache, now: datetime, limits: Limits | None = None,
     for req in wanted:
         kind = REQUEST_KIND[req]
         last = cache.last_attempt.get(req)
-        if last is not None and now - last < RETRY:
+        if last is not None and now - last < (GAS_RETRY if req == REQ_GAS else RETRY):
             continue
         if cache.calls_today(kind, today) >= limits.for_kind(kind):
             continue

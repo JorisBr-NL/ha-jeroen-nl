@@ -149,14 +149,15 @@ def full_cache(day: date) -> core.Cache:
     start = datetime.combine(day, datetime.min.time(), NL)
     c.prices[day] = [core.PricePoint(start.astimezone(timezone.utc), 0.1)]
     c.forecast_made = datetime.combine(day, datetime.min.time(), NL).replace(hour=4)
+    c.gas[day] = 0.8
     c.gas_fetched = start.replace(hour=7)
     c.solar_fetched = start.replace(hour=2)
     return c
 
 
-def test_empty_cache_at_night_fetches_today_and_solar_only():
+def test_empty_cache_at_night_fetches_today_gas_and_solar():
     due = core.due_requests(core.Cache(), nl(2026, 10, 27, 2))
-    assert due == [core.REQ_TODAY, core.REQ_SOLAR]
+    assert due == [core.REQ_TODAY, core.REQ_GAS, core.REQ_SOLAR]
 
 
 def test_nothing_due_when_everything_cached():
@@ -198,3 +199,53 @@ def test_solar_refetched_once_per_night():
     c = full_cache(date(2026, 10, 27))
     assert core.REQ_SOLAR not in core.due_requests(c, nl(2026, 10, 28, 1, 0))
     assert core.REQ_SOLAR in core.due_requests(c, nl(2026, 10, 28, 1, 30))
+
+
+# ---------------------------------------------------------------- gas day
+
+def test_gas_day_runs_from_six_to_six():
+    assert core.gas_day(nl(2026, 11, 10, 5, 59)) == date(2026, 11, 9)
+    assert core.gas_day(nl(2026, 11, 10, 6, 0)) == date(2026, 11, 10)
+    assert core.gas_day(nl(2026, 11, 10, 23, 59)) == date(2026, 11, 10)
+    # on the night the clocks go back
+    assert core.gas_day(nl(2026, 10, 25, 2, 30)) == date(2026, 10, 24)
+
+
+def test_gas_price_has_no_gap_after_midnight():
+    c = core.Cache(gas={date(2026, 11, 9): 0.8448, date(2026, 11, 10): 0.8067})
+    assert c.gas_price(nl(2026, 11, 10, 0, 0)) == 0.8448
+    assert c.gas_price(nl(2026, 11, 10, 5, 45)) == 0.8448
+    assert c.gas_price(nl(2026, 11, 10, 6, 0)) == 0.8067
+
+
+def test_gas_refetched_when_the_current_gas_day_is_missing():
+    """The bug from the issue: the 06:00 call came back without today's price
+    and nothing was fetched again until the next morning."""
+    c = full_cache(date(2026, 11, 9))
+    now = nl(2026, 11, 10, 6, 5)
+    assert core.REQ_GAS in core.due_requests(c, now)
+    c.last_attempt[core.REQ_GAS] = now   # that call did not have 10 November
+    assert core.REQ_GAS not in core.due_requests(c, now + timedelta(hours=1))
+    assert core.REQ_GAS in core.due_requests(c, now + timedelta(hours=2))
+
+
+def test_gas_not_refetched_during_the_day_once_present():
+    c = full_cache(date(2026, 11, 10))
+    assert core.REQ_GAS not in core.due_requests(c, nl(2026, 11, 10, 6, 5))
+    assert core.REQ_GAS not in core.due_requests(c, nl(2026, 11, 10, 13, 10))
+    # before midnight and after it the 10 November gas day is still running
+    assert core.REQ_GAS not in core.due_requests(c, nl(2026, 11, 11, 3, 0))
+
+
+def test_next_gas_day_fetched_after_1315():
+    c = full_cache(date(2026, 11, 10))
+    assert core.REQ_GAS in core.due_requests(c, nl(2026, 11, 10, 13, 15))
+    c.gas[date(2026, 11, 11)] = 0.8387
+    assert core.REQ_GAS not in core.due_requests(c, nl(2026, 11, 10, 15, 30))
+
+
+def test_gas_calls_capped_per_day():
+    c = core.Cache()
+    for _ in range(core.Limits().gas):
+        c.count_call(core.KIND_GAS, date(2026, 11, 10))
+    assert core.REQ_GAS not in core.due_requests(c, nl(2026, 11, 10, 12))
